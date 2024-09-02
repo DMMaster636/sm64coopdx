@@ -2,6 +2,7 @@
 
 #include "prevent_bss_reordering.h"
 #include "sm64.h"
+#include "sm64ap.h"
 #include "area.h"
 #include "audio/external.h"
 #include "behavior_data.h"
@@ -1416,6 +1417,7 @@ s32 act_death_exit(struct MarioState *m) {
         play_character_sound(m, CHAR_SOUND_OOOF2);
 #endif
         queue_rumble_data_mario(m, 5, 80);
+        SM64AP_DeathLinkSend();
         // restore 7.75 units of health
         m->healCounter = 31;
     }
@@ -1449,6 +1451,7 @@ s32 act_falling_death_exit(struct MarioState *m) {
         play_character_sound(m, CHAR_SOUND_OOOF2);
 #endif
         queue_rumble_data_mario(m, 5, 80);
+        SM64AP_DeathLinkSend();
         // restore 7.75 units of health
         m->healCounter = 31;
     }
@@ -1495,6 +1498,7 @@ s32 act_special_death_exit(struct MarioState *m) {
 
     if (launch_mario_until_land(m, ACT_HARD_BACKWARD_GROUND_KB, CHAR_ANIM_BACKWARD_AIR_KB, -24.0f)) {
         queue_rumble_data_mario(m, 5, 80);
+        SM64AP_DeathLinkSend();
         m->healCounter = 31;
     }
     // show Mario

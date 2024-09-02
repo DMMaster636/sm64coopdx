@@ -1,6 +1,7 @@
 #include <PR/ultratypes.h>
 
 #include "sm64.h"
+#include "sm64ap.h"
 #include "area.h"
 #include "audio/external.h"
 #include "behavior_data.h"
@@ -54,7 +55,7 @@ s32 check_common_idle_cancels(struct MarioState *m) {
         return set_mario_action(m, ACT_WALKING, 0);
     }
 
-    if (m->input & INPUT_B_PRESSED) {
+    if (m->input & INPUT_B_PRESSED && SM64AP_CanKick()) {
         return set_mario_action(m, ACT_PUNCHING, 0);
     }
 

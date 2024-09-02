@@ -1,4 +1,5 @@
 // capswitch.c.inc
+#include "sm64ap.h"
 
 static u8 capSwitchForcePress = FALSE;
 
@@ -8,7 +9,7 @@ void cap_switch_act_0(void) {
     o->oPosY += 71.0f;
     spawn_object_relative_with_scale(0, 0, -71, 0, 0.5f, o, MODEL_CAP_SWITCH_BASE, bhvCapSwitchBase);
     if (gCurrLevelNum != LEVEL_UNKNOWN_32) {
-        if (save_file_get_flags() & BHV_ARR(D_8032F0C0, o->oBehParams2ndByte, s32)) {
+        if (SM64AP_PressedSwitch(D_8032F0C0[o->oBehParams2ndByte])) {
             o->oAction = 3;
             o->header.gfx.scale[1] = 0.1f;
         } else

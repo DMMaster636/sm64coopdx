@@ -8,6 +8,7 @@
 #include "djui_panel_misc.h"
 #include "djui_panel_menu.h"
 #include "djui_panel_dynos.h"
+#include "djui_panel_archipelago.h"
 #include "pc/network/network.h"
 #include "pc/utils/misc.h"
 #include "pc/pc_main.h"
@@ -33,6 +34,9 @@ void djui_panel_options_create(struct DjuiBase* caller) {
         djui_button_create(body, DLANG(OPTIONS, DISPLAY), DJUI_BUTTON_STYLE_NORMAL, djui_panel_display_create);
         djui_button_create(body, DLANG(OPTIONS, SOUND), DJUI_BUTTON_STYLE_NORMAL, djui_panel_sound_create);
         djui_button_create(body, DLANG(OPTIONS, MISC), DJUI_BUTTON_STYLE_NORMAL, djui_panel_misc_create);
+        /*if (gDjuiInMainMenu) {
+            djui_button_create(body, DLANG(OPTIONS, ARCHIPELAGO), DJUI_BUTTON_STYLE_NORMAL, djui_panel_archipelago_create);
+        }*/
         djui_button_create(body, DLANG(MENU, BACK), DJUI_BUTTON_STYLE_BACK, djui_panel_options_back);
     }
 

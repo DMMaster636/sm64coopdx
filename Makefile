@@ -478,6 +478,7 @@ BUILD_DIR := $(BUILD_DIR_BASE)/$(VERSION)_pc
 
 ifeq ($(WINDOWS_BUILD),1)
 	EXE := $(BUILD_DIR)/sm64coopdx.exe
+		CMAKE_WIN_BUILD_FLAG := -DMINGW=1 -DWIN32=1 -DUSE_ZLIB=OFF -G"MSYS Makefiles"
 else # Linux builds/binary namer
 	ifeq ($(TARGET_RPI),1)
 		EXE := $(BUILD_DIR)/sm64coopdx.arm
@@ -709,19 +710,7 @@ else
   CP := cp
 endif
 
-ifeq ($(DISCORD_SDK),1)
-  LD := $(CXX)
-else ifeq ($(WINDOWS_BUILD),1)
-  ifeq ($(CROSS),i686-w64-mingw32.static-) # fixes compilation in MXE on Linux and WSL
-    LD := $(CC)
-  else ifeq ($(CROSS),x86_64-w64-mingw32.static-)
-    LD := $(CC)
-  else
-    LD := $(CXX)
-  endif
-else
-  LD := $(CXX)
-endif
+LD := $(CXX)
 
 AR        := $(CROSS)ar
 
@@ -734,7 +723,7 @@ else
 endif
 
 
-INCLUDE_DIRS := include $(BUILD_DIR) $(BUILD_DIR)/include src .
+INCLUDE_DIRS := include lib/APCpp $(BUILD_DIR) $(BUILD_DIR)/include src .
 ifeq ($(TARGET_N64),1)
   INCLUDE_DIRS += include/libc
 else
@@ -1138,6 +1127,7 @@ endif
 
 clean:
 	$(RM) -r $(BUILD_DIR_BASE)
+	$(RM) -r lib/APCpp/build
 
 cleantools:
 	$(MAKE) -s -C $(TOOLS_DIR) clean
@@ -1485,6 +1475,16 @@ $(BUILD_DIR)/%.o: %.s
 	$(call print,Assembling:,$<,$@)
 	$(V)$(AS) $(ASFLAGS) -MD $(BUILD_DIR)/$*.d -o $@ $<
 
+APCPP_LIB := lib/APCpp/build/libAPCpp
+ifeq ($(WINDOWS_BUILD),1)
+  APCPP_LIB := $(APCPP_LIB).dll
+else
+  APCPP_LIB := $(APCPP_LIB).so
+endif
+
+$(APCPP_LIB): lib/APCpp/Archipelago.cpp lib/APCpp/Archipelago.h
+	cd lib/APCpp && mkdir -p build && cd build && CXX=$(CXX) cmake .. $(CMAKE_WIN_BUILD_FLAG) && CXX=$(CXX) cmake --build .
+
 ifeq ($(TARGET_N64),1)
   # Assemble RSP assembly code
   $(BUILD_DIR)/rsp/%.bin $(BUILD_DIR)/rsp/%_data.bin: rsp/%.s
@@ -1516,9 +1516,11 @@ ifeq ($(TARGET_N64),1)
   $(BUILD_DIR)/$(TARGET).objdump: $(ELF)
 	$(OBJDUMP) -D $< > $@
 else
-  $(EXE): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(BUILD_DIR)/$(RPC_LIBS) $(BUILD_DIR)/$(DISCORD_SDK_LIBS) $(BUILD_DIR)/$(COOPNET_LIBS) $(BUILD_DIR)/$(LANG_DIR) $(BUILD_DIR)/$(MOD_DIR) $(BUILD_DIR)/$(PALETTES_DIR)
+  $(EXE): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(BUILD_DIR)/$(RPC_LIBS) $(BUILD_DIR)/$(DISCORD_SDK_LIBS) $(BUILD_DIR)/$(COOPNET_LIBS) $(BUILD_DIR)/$(LANG_DIR) $(BUILD_DIR)/$(MOD_DIR) $(BUILD_DIR)/$(PALETTES_DIR) $(APCPP_LIB)
 	@$(PRINT) "$(GREEN)Linking executable: $(BLUE)$@ $(NO_COL)\n"
-	$(V)$(LD) $(PROF_FLAGS) -L $(BUILD_DIR) -o $@ $(O_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS)
+	$(V)$(LD) $(PROF_FLAGS) -static-libgcc -static-libstdc++ -L $(BUILD_DIR) -o $@ $(O_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS) $(APCPP_LIB) -Wl,-rpath,. 
+	@$(PRINT) "$(GREEN)Linking AP Libs: $(BLUE)$@ $(NO_COL)\n"
+	$(V)@$(CP) $(APCPP_LIB) $(BUILD_DIR)
 endif
 
 .PHONY: all clean distclean default diff test load libultra res

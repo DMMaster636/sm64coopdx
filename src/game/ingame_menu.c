@@ -23,6 +23,7 @@
 #include "segment7.h"
 #include "seq_ids.h"
 #include "sm64.h"
+#include "sm64ap.h"
 #include "types.h"
 #include "macros.h"
 #include "hardcoded.h"

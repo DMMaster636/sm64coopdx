@@ -3,6 +3,7 @@
 #include <time.h>
 
 #include "sm64.h"
+#include "sm64ap.h"
 #include "seq_ids.h"
 #include "dialog_ids.h"
 #include "audio/external.h"
@@ -303,11 +304,11 @@ void load_level_init_text(u32 arg) {
     u32 dialogID = gCurrentArea->dialog[arg];
 
     if (dialogID == gBehaviorValues.dialogs.VanishCourseDialog) {
-        gotAchievement = save_file_get_flags() & SAVE_FLAG_HAVE_VANISH_CAP;
+        gotAchievement = SM64AP_CheckedLoc(SM64AP_ID_VANISHCAP);
     } else if (dialogID == gBehaviorValues.dialogs.MetalCourseDialog) {
-        gotAchievement = save_file_get_flags() & SAVE_FLAG_HAVE_METAL_CAP;
+        gotAchievement = SM64AP_CheckedLoc(SM64AP_ID_METALCAP);
     } else if (dialogID == gBehaviorValues.dialogs.WingCourseDialog) {
-        gotAchievement = save_file_get_flags() & SAVE_FLAG_HAVE_WING_CAP;
+        gotAchievement = SM64AP_CheckedLoc(SM64AP_ID_WINGCAP);
     } else if (dialogID == 255) {
         gotAchievement = TRUE;
     } else {
@@ -644,7 +645,7 @@ void check_instant_warp(void) {
     }
 
     if (gCurrLevelNum == LEVEL_CASTLE
-        && save_file_get_total_star_count(gCurrSaveFileNum - 1, COURSE_MIN - 1, COURSE_MAX - 1) >= gLevelValues.infiniteStairsRequirement) {
+        && save_file_get_total_star_count(gCurrSaveFileNum - 1, COURSE_MIN - 1, COURSE_MAX - 1) >= SM64AP_GetRequiredStars(gLevelValues.infiniteStairsRequirement)) {
         return;
     }
 
@@ -748,6 +749,8 @@ s16 music_changed_through_warp(s16 arg) {
  * Set the current warp type and destination level/area/node.
  */
 void initiate_warp(s16 destLevel, s16 destArea, s16 destWarpNode, s32 arg3) {
+    SM64AP_RedirectWarp(&gCurrLevelNum, &destLevel, &(gCurrentArea->index), &destArea, &destWarpNode, sSourceWarpNodeId == WARP_NODE_DEATH, sDelayedWarpOp);
+
     if (destWarpNode >= WARP_NODE_CREDITS_MIN) {
         sWarpDest.type = WARP_TYPE_CHANGE_LEVEL;
     } else if (destLevel != gCurrLevelNum) {
@@ -1148,7 +1151,8 @@ void update_hud_values(void) {
         }
 #endif
 
-        gHudDisplay.stars = gMarioState->numStars;
+        gHudDisplay.stars = SM64AP_GetStars();
+        SM64AP_PrintNext();
         gHudDisplay.lives = gMarioState->numLives;
         gHudDisplay.keys = gMarioState->numKeys;
 
@@ -1156,6 +1160,10 @@ void update_hud_values(void) {
             play_sound(SOUND_MENU_POWER_METER, gGlobalSoundSource);
         }
         gHudDisplay.wedges = numHealthWedges;
+
+        if (SM64AP_DeathLinkPending()) {
+            gMarioState->health = 0xFF;
+        }
 
         if (gMarioState->hurtCounter > 0) {
             gHudDisplay.flags |= HUD_DISPLAY_FLAG_EMPHASIZE_POWER;
