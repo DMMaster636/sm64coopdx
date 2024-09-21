@@ -1,4 +1,5 @@
 // water_pillar.c.inc
+#include "sm64ap.h"
 
 void water_level_pillar_undrained(void) {
     struct Object *otherWaterPillar;
@@ -29,7 +30,7 @@ void water_level_pillar_undrained(void) {
                 if (otherWaterPillar->oAction > 1) {
                     o->oAction++;
 
-                    save_file_set_flags(SAVE_FLAG_MOAT_DRAINED);
+                    SM64AP_SetMoatDrained();
                     play_puzzle_jingle();
                 }
             }
@@ -63,7 +64,7 @@ static u8 bhv_water_level_pillar_ignore_if_true(void) {
 }
 
 void bhv_water_level_pillar_init(void) {
-    if (save_file_get_flags() & SAVE_FLAG_MOAT_DRAINED)
+    if (SM64AP_MoatDrained())
         o->oWaterLevelPillarDrained = 1;
 
     struct SyncObject* so = sync_object_init(o, SYNC_DISTANCE_ONLY_EVENTS);

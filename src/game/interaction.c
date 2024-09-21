@@ -22,6 +22,7 @@
 #include "save_file.h"
 #include "seq_ids.h"
 #include "sm64.h"
+#include "sm64ap.h"
 #include "sound_init.h"
 #include "rumble_init.h"
 #include "object_collision.h"
@@ -984,6 +985,8 @@ u32 interact_bbh_entrance(struct MarioState *m, UNUSED u32 interactType, struct 
         m->interactObj = o;
         m->usedObj = o;
 
+        SM64AP_SetClockToTTCState();
+
         if (m->action & ACT_FLAG_AIR) {
             return set_mario_action(m, ACT_BBH_ENTER_SPIN, 0);
         }
@@ -1078,28 +1081,32 @@ u32 interact_warp_door(struct MarioState *m, UNUSED u32 interactType, struct Obj
     if (prevent_interact_door(m, o)) { return FALSE; }
 
     if (m->action == ACT_WALKING || m->action == ACT_DECELERATING) {
-        if (warpDoorId == 1 && !(saveFlags & SAVE_FLAG_UNLOCKED_UPSTAIRS_DOOR)) {
-            if (!(saveFlags & SAVE_FLAG_HAVE_KEY_2)) {
-                if (display_door_dialog(m, (saveFlags & SAVE_FLAG_HAVE_KEY_1) ? gBehaviorValues.dialogs.KeyDoor1HaveDialog : gBehaviorValues.dialogs.KeyDoor1DontHaveDialog)) {
+        if (warpDoorId == 1) {
+            if (!SM64AP_HaveKey2()) {
+                if (display_door_dialog(m, SM64AP_HaveKey1() ? gBehaviorValues.dialogs.KeyDoor1HaveDialog : gBehaviorValues.dialogs.KeyDoor1DontHaveDialog)) {
                     sDisplayingDoorText = TRUE;
                     sCanInteractDoor = FALSE;
                 }
                 return FALSE;
             }
 
-            doorAction = ACT_UNLOCKING_KEY_DOOR;
+            if (!(saveFlags & SAVE_FLAG_UNLOCKED_UPSTAIRS_DOOR)) {
+                doorAction = ACT_UNLOCKING_KEY_DOOR;
+            }
         }
 
-        if (warpDoorId == 2 && !(saveFlags & SAVE_FLAG_UNLOCKED_BASEMENT_DOOR)) {
-            if (!(saveFlags & SAVE_FLAG_HAVE_KEY_1)) {
-                if (display_door_dialog(m, (saveFlags & SAVE_FLAG_HAVE_KEY_2) ? gBehaviorValues.dialogs.KeyDoor2HaveDialog : gBehaviorValues.dialogs.KeyDoor2DontHaveDialog)) {
+        if (warpDoorId == 2) {
+            if (!SM64AP_HaveKey1()) {
+                if (display_door_dialog(m, SM64AP_HaveKey2() ? gBehaviorValues.dialogs.KeyDoor2HaveDialog : gBehaviorValues.dialogs.KeyDoor2DontHaveDialog)) {
                     sDisplayingDoorText = TRUE;
                     sCanInteractDoor = FALSE;
                 }
                 return FALSE;
             }
 
-            doorAction = ACT_UNLOCKING_KEY_DOOR;
+            if (!(saveFlags & SAVE_FLAG_UNLOCKED_BASEMENT_DOOR)) {
+                doorAction = ACT_UNLOCKING_KEY_DOOR;
+            }
         }
 
         if (m->action == ACT_WALKING || m->action == ACT_DECELERATING) {
@@ -1166,7 +1173,8 @@ u32 get_door_save_file_flag(struct Object *door) {
 u32 interact_door(struct MarioState *m, UNUSED u32 interactType, struct Object *o) {
     if (!m || !o) { return FALSE; }
     if (m->playerIndex != 0 && o == NULL) { return FALSE; }
-    s16 requiredNumStars = o->oBehParams >> 24;
+    s16 orignumstars = o->oBehParams >> 24;
+    s16 requiredNumStars = SM64AP_GetRequiredStars(orignumstars);
     s16 numStars = save_file_get_total_star_count(gCurrSaveFileNum - 1, COURSE_MIN - 1, COURSE_MAX - 1);
 
     if (o->oAction != 0) { return FALSE; }
@@ -1202,7 +1210,7 @@ u32 interact_door(struct MarioState *m, UNUSED u32 interactType, struct Object *
         } else if (!sDisplayingDoorText) {
             u32 text = gBehaviorValues.dialogs.DoorNeedKeyDialog << 16;
 
-            switch (requiredNumStars) {
+            switch (orignumstars) {
                 case 1:
                     text = gBehaviorValues.dialogs.DoorNeed1StarDialog << 16;
                     break;
@@ -1223,7 +1231,7 @@ u32 interact_door(struct MarioState *m, UNUSED u32 interactType, struct Object *
                     break;
             }
 
-            text += requiredNumStars - numStars;
+            text += requiredNumStars;
 
             if ((requiredNumStars == 70) || display_door_dialog(m, text)) {
                 if (requiredNumStars == 70) {
@@ -1236,7 +1244,7 @@ u32 interact_door(struct MarioState *m, UNUSED u32 interactType, struct Object *
                 return TRUE;
             }
         }
-    } else if (m->action == ACT_IDLE && sDisplayingDoorText == TRUE && requiredNumStars == 70) {
+    } else if (m->action == ACT_IDLE && sDisplayingDoorText == TRUE && orignumstars == 70) {
         m->interactObj = o;
         m->usedObj = o;
         return set_mario_action(m, ACT_ENTERING_STAR_DOOR, should_push_or_pull_door(m, o));
@@ -1960,7 +1968,7 @@ u32 check_object_grab_mario(struct MarioState *m, UNUSED u32 interactType, struc
 u32 interact_pole(struct MarioState *m, UNUSED u32 interactType, struct Object *o) {
     if (!m || !o) { return FALSE; }
     s32 actionId = m->action & ACT_ID_MASK;
-    if (actionId >= 0x080 && actionId < 0x0A0) {
+    if (actionId >= 0x080 && actionId < 0x0A0 && SM64AP_CanClimb()) {
         if (!(m->prevAction & ACT_FLAG_ON_POLE) || m->usedObj != o) {
 #ifdef VERSION_SH
             f32 velConv = m->forwardVel; // conserve the velocity.

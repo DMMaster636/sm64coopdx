@@ -1,6 +1,7 @@
 #include <PR/ultratypes.h>
 
 #include "sm64.h"
+#include "sm64ap.h"
 #include "area.h"
 #include "audio/external.h"
 #include "behavior_actions.h"
@@ -199,17 +200,17 @@ void bhv_toad_message_init(void) {
 
     if (dialogId == (s32)TOAD_STAR_1_DIALOG) {
         enoughStars = (starCount >= TOAD_STAR_1_REQUIREMENT);
-        if (saveFlags & SAVE_FLAG_COLLECTED_TOAD_STAR_1) {
+        if (SM64AP_CheckedLoc(SM64AP_LOCATIONID_BASEMENTTOAD)) {
             dialogId = TOAD_STAR_1_DIALOG_AFTER;
         }
     } else if (dialogId == (s32)TOAD_STAR_2_DIALOG) {
         enoughStars = (starCount >= TOAD_STAR_2_REQUIREMENT);
-        if (saveFlags & SAVE_FLAG_COLLECTED_TOAD_STAR_2) {
+        if (SM64AP_CheckedLoc(SM64AP_LOCATIONID_SECONDFLOORTOAD)) {
             dialogId = TOAD_STAR_2_DIALOG_AFTER;
         }
     } else if (dialogId == (s32)TOAD_STAR_3_DIALOG) {
         enoughStars = (starCount >= TOAD_STAR_3_REQUIREMENT);
-        if (saveFlags & SAVE_FLAG_COLLECTED_TOAD_STAR_3) {
+        if (SM64AP_CheckedLoc(SM64AP_LOCATIONID_THIRDFLOORTOAD)) {
             dialogId = TOAD_STAR_3_DIALOG_AFTER;
         }
     }

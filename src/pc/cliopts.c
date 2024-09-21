@@ -1,4 +1,5 @@
 #include "cliopts.h"
+#include "sm64ap.h"
 #include "configfile.h"
 #include "pc_main.h"
 #include "platform.h"
@@ -29,6 +30,16 @@ static void print_help(void) {
     printf("--skip-update-check     Skips the update check when loading the game.\n");
 }
 
+static void print_ap_help(void) {
+    printf("sm64coopdx-archipelago\n");
+    printf("You need to at least specify Name (For MultiWorld) or Seed Filename (For Singleplayer).\n");
+    printf("--sm64ap_name NAME      Archipelago Name.\n");
+    printf("--sm64ap_ip IP:PORT     Archipelago IP and Port.\n");
+    printf("--sm64ap_pass PASS      Archipelago Password.\n");
+    printf("--sm64ap_file FILE      Archipelago File.\n");
+    printf("Exiting.\n");
+}
+
 static inline int arg_string(const char *name, const char *value, char *target, int maxLength) {
     const unsigned int arglen = strlen(value);
     if (arglen >= (unsigned int) maxLength) {
@@ -49,14 +60,14 @@ bool parse_cli_opts(int argc, char* argv[]) {
     // initialize options with false values
     memset(&gCLIOpts, 0, sizeof(gCLIOpts));
 
+    int idx_name = 0, idx_ip = 0, idx_pass = 0, idx_file = 0;
     for (int i = 1; i < argc; i++) {
 #if defined(_WIN32) || defined(_WIN64)
         if (!strcmp(argv[i], "--console")) {
             gCLIOpts.console = true;
-        } else if (!strcmp(argv[i], "--savepath") && (i + 1) < argc) {
-#else
-        if (!strcmp(argv[i], "--savepath") && (i + 1) < argc) {
+        }
 #endif
+        if (!strcmp(argv[i], "--savepath") && (i + 1) < argc) {
             arg_string("--savepath", argv[++i], gCLIOpts.savePath, SYS_MAX_PATH);
         } else if (!strcmp(argv[i], "--configfile") && (i + 1) < argc) {
             arg_string("--configfile", argv[++i], gCLIOpts.configFile, SYS_MAX_PATH);
@@ -83,10 +94,35 @@ bool parse_cli_opts(int argc, char* argv[]) {
             arg_string("--playername", argv[++i], gCLIOpts.playerName, MAX_CONFIG_STRING);
         } else if (!strcmp(argv[i], "--skip-update-check")) {
             gCLIOpts.skipUpdateCheck = true;
+        } else if (!strcmp(argv[i], "--sm64ap_name") && (i + 1) < argc) {
+            idx_name = ++i;
+            arg_string("--sm64ap_name", argv[++i], gCLIOpts.apName, MAX_CONFIG_STRING);
+        } else if (!strcmp(argv[i], "--sm64ap_ip") && (i + 1) < argc) {
+            idx_ip = ++i;
+            arg_string("--sm64ap_ip", argv[++i], gCLIOpts.apIp, MAX_CONFIG_STRING);
+        } else if (!strcmp(argv[i], "--sm64ap_pass") && (i + 1) < argc) {
+            idx_pass = ++i;
+            arg_string("--sm64ap_pass", argv[++i], gCLIOpts.apPass, MAX_CONFIG_STRING);
+        } else if (!strcmp(argv[i], "--sm64ap_file") && (i + 1) < argc) {
+            idx_file = ++i;
+            arg_string("--sm64ap_file", argv[++i], gCLIOpts.apFile, SYS_MAX_PATH);
         } else if (!strcmp(argv[i], "--help")) {
             print_help();
             return false;
         }
+    }
+
+    if (idx_name == 0 || idx_ip == 0) {
+        if (idx_file == 0) {
+            print_ap_help();
+            fflush(stdout);
+            game_exit();
+            return false;
+        } else {
+            SM64AP_InitSP(argv[idx_file]);
+        }
+    } else {
+        SM64AP_InitMW(argv[idx_ip], argv[idx_name], idx_pass == 0 ? "" : argv[idx_pass]);
     }
 
     return true;

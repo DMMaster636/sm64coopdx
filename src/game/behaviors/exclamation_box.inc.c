@@ -1,4 +1,5 @@
 // exclamation_box.c.inc
+#include "sm64ap.h"
 
 struct ObjectHitbox sExclamationBoxHitbox = {
     /* interactType: */ INTERACT_BREAKABLE,
@@ -36,11 +37,16 @@ void bhv_rotating_exclamation_box_loop(void) {
 }
 
 void exclamation_box_act_0(void) {
+    if ((o->oBehParams >> 16) == 0x1404) {
+        o->oAnimState = 3;
+        o->oAction = 2;
+        return;
+    }
+
     o->oExclamationBoxForce = FALSE;
     if (o->oBehParams2ndByte < 3) {
         o->oAnimState = o->oBehParams2ndByte;
-        if ((save_file_get_flags() & BHV_ARR(D_8032F0C0, o->oBehParams2ndByte, s32))
-            || ((o->oBehParams >> 24) & 0xFF) != 0)
+        if ((o->oBehParams >> 16) == 0x1404 || SM64AP_HaveCap(D_8032F0C0[o->oBehParams2ndByte]))
             o->oAction = 2;
         else
             o->oAction = 1;
@@ -56,8 +62,7 @@ void exclamation_box_act_1(void) {
         spawn_object(o, smlua_model_util_load(E_MODEL_EXCLAMATION_POINT), bhvRotatingExclamationMark);
         cur_obj_set_model(smlua_model_util_load(E_MODEL_EXCLAMATION_BOX_OUTLINE));
     }
-    if ((save_file_get_flags() & BHV_ARR(D_8032F0C0, o->oBehParams2ndByte, s32))
-        || ((o->oBehParams >> 24) & 0xFF) != 0) {
+    if ((o->oBehParams >> 16) == 0x1404 || SM64AP_HaveCap(D_8032F0C0[o->oBehParams2ndByte])) {
         o->oAction = 2;
         cur_obj_set_model(smlua_model_util_load(E_MODEL_EXCLAMATION_BOX));
     }
@@ -126,6 +131,11 @@ void exclamation_box_spawn_contents(struct Struct802C0DF0 *a0, u8 a1) {
     struct MarioState* marioState = nearest_mario_state_to_object(o);
     struct Object* player = marioState ? marioState->marioObj : NULL;
     struct Object *spawnedObject = NULL;
+
+    if ((o->oBehParams >> 16) == 0x1404) {
+        SM64AP_SendByBoxID(o->oBehParams & 0xFFFF);
+        return;
+    }
 
     if (o->oExclamationBoxForce) {
         return;

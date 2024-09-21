@@ -1,5 +1,7 @@
+#include <stdio.h>
 #include <ultra64.h>
 #include "sm64.h"
+#include "sm64ap.h"
 #include "game_init.h"
 #include "main.h"
 #include "engine/math_util.h"
@@ -557,21 +559,27 @@ void save_file_collect_star_or_key(s16 coinScore, s16 starIndex, u8 fromNetwork)
             if (!(save_file_get_flags() & (SAVE_FLAG_HAVE_KEY_1 | SAVE_FLAG_UNLOCKED_BASEMENT_DOOR))) {
                 save_file_set_flags(SAVE_FLAG_HAVE_KEY_1);
             }
+            SM64AP_SendItem(SM64AP_ID_KEY1);
+            SM64AP_FinishBowser(0);
             break;
 
         case LEVEL_BOWSER_2:
             if (!(save_file_get_flags() & (SAVE_FLAG_HAVE_KEY_2 | SAVE_FLAG_UNLOCKED_UPSTAIRS_DOOR))) {
                 save_file_set_flags(SAVE_FLAG_HAVE_KEY_2);
             }
+            SM64AP_SendItem(SM64AP_ID_KEY2);
+            SM64AP_FinishBowser(1);
             break;
 
         case LEVEL_BOWSER_3:
+            SM64AP_FinishBowser(2);
             break;
 
         default:
             if (!(save_file_get_star_flags(fileIndex, index) & starFlag)) {
                 save_file_set_star_flags(fileIndex, index, starFlag);
             }
+            SM64AP_SendItem((courseIndex == -1 ? (10+15-1)*7 : courseIndex*7) + starIndex + SM64AP_ID_OFFSET);
             break;
     }
 }
@@ -624,18 +632,7 @@ s32 save_file_get_course_star_count(s32 fileIndex, s32 courseIndex) {
 
 s32 save_file_get_total_star_count(s32 fileIndex, s32 minCourse, s32 maxCourse) {
     if (INVALID_FILE_INDEX(fileIndex)) { return 02; }
-    s32 count = 0;
-
-    if (minCourse < -1) { minCourse = -1; }
-    if (maxCourse >= COURSE_COUNT) { maxCourse = COURSE_COUNT-1; }
-
-    // Get standard course star count.
-    for (; minCourse <= maxCourse; minCourse++) {
-        count += save_file_get_course_star_count(fileIndex, minCourse);
-    }
-
-    // Add castle secret star count.
-    return save_file_get_course_star_count(fileIndex, -1) + count;
+    return SM64AP_GetStars();
 }
 
 void save_file_set_flags(u32 flags) {
@@ -644,6 +641,18 @@ void save_file_set_flags(u32 flags) {
     // prevent saving any flag that would make the player hatless on level transition
     flags &= ~(SAVE_FLAG_CAP_ON_GROUND | SAVE_FLAG_CAP_ON_KLEPTO | SAVE_FLAG_CAP_ON_MR_BLIZZARD | SAVE_FLAG_CAP_ON_UKIKI);
     if (flags == 0) { return; }
+
+    switch (flags) {
+        case 2:
+            SM64AP_SendItem(SM64AP_ID_WINGCAP);
+            break;
+        case 4:
+            SM64AP_SendItem(SM64AP_ID_METALCAP);
+            break;
+        case 8:
+            SM64AP_SendItem(SM64AP_ID_VANISHCAP);
+            break;
+    }
 
     gSaveBuffer.files[gCurrSaveFileNum - 1][gSaveFileUsingBackupSlot].flags |= (flags | SAVE_FLAG_FILE_EXISTS);
     gSaveFileModified = TRUE;
@@ -674,15 +683,7 @@ u32 save_file_get_flags(void) {
 u32 save_file_get_star_flags(s32 fileIndex, s32 courseIndex) {
     if (INVALID_FILE_INDEX(fileIndex)) { return 0; }
     if (INVALID_SRC_SLOT(gSaveFileUsingBackupSlot)) { return 0; }
-    u32 starFlags = 0;
-
-    if (courseIndex == -1) {
-        starFlags = SAVE_FLAG_TO_STAR_FLAG(gSaveBuffer.files[fileIndex][gSaveFileUsingBackupSlot].flags);
-    } else if (!INVALID_COURSE_STAR_INDEX(courseIndex)) {
-        starFlags = gSaveBuffer.files[fileIndex][gSaveFileUsingBackupSlot].courseStars[courseIndex] & 0x7F;
-    }
-
-    return starFlags;
+    return SM64AP_CourseStarFlags(courseIndex);
 }
 
 /**
@@ -748,7 +749,7 @@ s32 save_file_is_cannon_unlocked(s32 fileIndex, s32 courseIndex) {
     if (INVALID_FILE_INDEX(fileIndex)) { return 0; }
     if (INVALID_SRC_SLOT(gSaveFileUsingBackupSlot)) { return 0; }
     if (INVALID_COURSE_STAR_INDEX(courseIndex)) { return 0; }
-    return (gSaveBuffer.files[fileIndex][gSaveFileUsingBackupSlot].courseStars[courseIndex] & 0x80) != 0;
+    return SM64AP_HaveCannon(gCurrCourseNum-1);
 }
 
 /**
@@ -758,6 +759,7 @@ void save_file_set_cannon_unlocked(void) {
     if (INVALID_FILE_INDEX(gCurrSaveFileNum - 1)) { return; }
     if (INVALID_SRC_SLOT(gSaveFileUsingBackupSlot)) { return; }
     if (INVALID_COURSE_STAR_INDEX(gCurrCourseNum)) { return; }
+    if (gCurrCourseNum <= 15 ) SM64AP_SendItem(200 + gCurrCourseNum - 1 + SM64AP_ID_OFFSET);
     gSaveBuffer.files[gCurrSaveFileNum - 1][gSaveFileUsingBackupSlot].courseStars[gCurrCourseNum] |= 0x80;
     gSaveBuffer.files[gCurrSaveFileNum - 1][gSaveFileUsingBackupSlot].flags |= SAVE_FLAG_FILE_EXISTS;
     gSaveFileModified = TRUE;

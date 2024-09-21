@@ -2,6 +2,7 @@
 #define GFX_DIMENSIONS_H
 
 #include <math.h>
+#include "config.h"
 #include "pc/gfx/gfx_pc.h"
 
 #define GFX_DIMENSIONS_FROM_LEFT_EDGE(v) (SCREEN_WIDTH / 2 - SCREEN_HEIGHT / 2 * gfx_current_dimensions.aspect_ratio + (v))

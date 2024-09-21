@@ -27,6 +27,10 @@ struct CLIOptions {
     char playerName[MAX_CONFIG_STRING];
     bool hideLoadingScreen;
     bool skipUpdateCheck;
+    char apName[MAX_CONFIG_STRING];
+    char apIp[MAX_CONFIG_STRING];
+    char apPass[MAX_CONFIG_STRING];
+    char apFile[SYS_MAX_PATH];
 };
 
 extern struct CLIOptions gCLIOpts;

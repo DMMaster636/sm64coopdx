@@ -480,6 +480,7 @@ BUILD_DIR := $(BUILD_DIR_BASE)/$(VERSION)_pc
 
 ifeq ($(WINDOWS_BUILD),1)
 	EXE := $(BUILD_DIR)/sm64coopdx.exe
+	CMAKE_WIN_BUILD_FLAG := -DMINGW=1 -DWIN32=1 -DUSE_ZLIB=OFF -G"MSYS Makefiles"
 else # Linux builds/binary namer
 	ifeq ($(TARGET_RPI),1)
 		EXE := $(BUILD_DIR)/sm64coopdx.arm
@@ -577,6 +578,13 @@ ULTRA_O_FILES := $(foreach file,$(ULTRA_S_FILES),$(BUILD_DIR)/$(file:.s=.o)) \
                  $(foreach file,$(ULTRA_C_FILES),$(BUILD_DIR)/$(file:.c=.o))
 
 GODDARD_O_FILES := $(foreach file,$(GODDARD_C_FILES),$(BUILD_DIR)/$(file:.c=.o))
+
+APCPP_LIB := lib/APCpp/build/libAPCpp
+ifeq ($(WINDOWS_BUILD),1)
+	APCPP_LIB := $(APCPP_LIB).dll
+else
+	APCPP_LIB := $(APCPP_LIB).so
+endif
 
 RPC_LIBS :=
 DISCORD_SDK_LIBS :=
@@ -740,7 +748,7 @@ INCLUDE_DIRS := include $(BUILD_DIR) $(BUILD_DIR)/include src .
 ifeq ($(TARGET_N64),1)
   INCLUDE_DIRS += include/libc
 else
-  INCLUDE_DIRS += sound lib/lua/include lib/coopnet/include $(EXTRA_INCLUDES)
+  INCLUDE_DIRS += sound lib/APCpp lib/lua/include lib/coopnet/include $(EXTRA_INCLUDES)
 endif
 
 # Connfigure backend flags
@@ -1140,6 +1148,7 @@ endif
 
 clean:
 	$(RM) -r $(BUILD_DIR_BASE)
+	$(RM) -r lib/APCpp/build
 
 cleantools:
 	$(MAKE) -s -C $(TOOLS_DIR) clean
@@ -1154,6 +1163,9 @@ load: $(ROM)
 	$(LOADER) $(LOADER_FLAGS) $<
 
 libultra: $(BUILD_DIR)/libultra.a
+
+$(BUILD_DIR)/$(APCPP_LIB):
+	@$(CP) -f $(APCPP_LIB) $(BUILD_DIR)
 
 $(BUILD_DIR)/$(RPC_LIBS):
 	@$(CP) -f $(RPC_LIBS) $(BUILD_DIR)
@@ -1477,6 +1489,9 @@ $(BUILD_DIR)/src/audio/seqplayer.copt: COPTFLAGS := -inline_manual
 
 endif
 
+$(APCPP_LIB): lib/APCpp/Archipelago.cpp lib/APCpp/Archipelago.h
+	cd lib/APCpp && mkdir -p build && cd build && CXX=$(CXX) cmake .. $(CMAKE_WIN_BUILD_FLAG) && CXX=$(CXX) cmake --build .
+
 # Run linker script through the C preprocessor
 $(BUILD_DIR)/$(LD_SCRIPT): $(LD_SCRIPT)
 	$(call print,Preprocessing linker script:,$<,$@)
@@ -1518,7 +1533,7 @@ ifeq ($(TARGET_N64),1)
   $(BUILD_DIR)/$(TARGET).objdump: $(ELF)
 	$(OBJDUMP) -D $< > $@
 else
-  $(EXE): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(BUILD_DIR)/$(RPC_LIBS) $(BUILD_DIR)/$(DISCORD_SDK_LIBS) $(BUILD_DIR)/$(COOPNET_LIBS) $(BUILD_DIR)/$(LANG_DIR) $(BUILD_DIR)/$(MOD_DIR) $(BUILD_DIR)/$(PALETTES_DIR)
+  $(EXE): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(BUILD_DIR)/$(APCPP_LIB) $(BUILD_DIR)/$(RPC_LIBS) $(BUILD_DIR)/$(DISCORD_SDK_LIBS) $(BUILD_DIR)/$(COOPNET_LIBS) $(BUILD_DIR)/$(LANG_DIR) $(BUILD_DIR)/$(MOD_DIR) $(BUILD_DIR)/$(PALETTES_DIR)
 	@$(PRINT) "$(GREEN)Linking executable: $(BLUE)$@ $(NO_COL)\n"
 	$(V)$(LD) $(PROF_FLAGS) -L $(BUILD_DIR) -o $@ $(O_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS)
 endif
