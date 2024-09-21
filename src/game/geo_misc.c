@@ -84,7 +84,7 @@ Gfx *geo_exec_inside_castle_light(s32 callContext, struct GraphNode *node, UNUSE
 
     if (callContext == GEO_CONTEXT_RENDER) {
         flags = save_file_get_flags();
-        if (gHudDisplay.stars >= gLevelValues.wingCapLookUpReq && !(SM64AP_CheckedLoc(SM64AP_ID_WINGCAP)) {
+        if (gHudDisplay.stars >= gLevelValues.wingCapLookUpReq && !SM64AP_CheckedLoc(SM64AP_ID_WINGCAP)) {
             displayList = alloc_display_list(2 * sizeof(*displayList));
 
             if (displayList == NULL) {
